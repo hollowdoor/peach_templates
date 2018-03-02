@@ -124,10 +124,35 @@ class RendererAsync extends Renderer {
     }
 }
 
-export function present(str, format, defaults){
-    return new RendererSync(str, format, defaults);
+function composePresenter(presentFN){
+    return function present(str, format = {}, defaults = {}){
+
+        if(typeof str !== 'string'){
+            throw new TypeError(`The value (${str}) at argument 0 is not a string`);
+        }
+
+        if(typeof format !== 'object'){
+            throw new TypeError(`The value (${format}) at argument 1 is not an object`);
+        }
+
+        if(typeof defaults !== 'object'){
+            throw new TypeError(`The value (${defaults}) at argument 2 is not an object`);
+        }
+
+        return presentFN(str, format, defaults);
+    };
 }
 
-export function asyncPresent(str, format, defaults){
-    return new RendererAsync(str, format, defaults);
-}
+const present = composePresenter(
+    function(str, format, defaults){
+        return new RendererSync(str, format, defaults);
+    }
+);
+
+const asyncPresent = composePresenter(
+    function(str, format, defaults){
+        return new RendererAsync(str, format, defaults);
+    }
+);
+
+export { present, asyncPresent }
