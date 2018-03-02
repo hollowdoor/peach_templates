@@ -1,0 +1,48 @@
+{
+  "scripts": {
+    "build": "ebam",
+    "pretest": "npm run build && npm run gentoc",
+    "test": "node test/code.js",
+    "gentoc": "doctoc --title '**Contents**' README.md"
+  },
+  "name": "peach-templates",
+  "description": "Very simple templating",
+  "keywords": [
+    "template",
+    "string",
+    "interpolation",
+    "format"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "ebam": {
+    "entry": "src/index.js",
+    "transforms": {
+      "dangerousForOf": false,
+      "dangerousTaggedTemplateString": false
+    },
+    "test": {
+      "dest": "test/code.js",
+      "src": "test/src.js"
+    }
+  },
+  "author": "Quentin Engles <hollowdoor99@gmail.com> (https://hollowdoor.github.io)",
+  "main": "dist/bundle.js",
+  "jsnext:main": "dist/bundle.es.js",
+  "module": "dist/bundle.es.js",
+  "devDependencies": {
+    "doctoc": "^1.3.1"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hollowdoor/peach_templates.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hollowdoor/peach_templates/issues"
+  },
+  "homepage": "https://github.com/hollowdoor/peach_templates#readme"
+}

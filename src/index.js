@@ -1,0 +1,133 @@
+function reduceProp(last, prop, i, props){
+    return props[i+1] !== void 0
+    ? last[prop]
+    : {last, prop};
+}
+
+function formatWith(format, gets, defaults){
+
+    const {last, prop} = gets
+    .split('.')
+    .reduce(reduceProp, format);
+
+    return last[prop] !== void 0
+    ? typeof last[prop] === 'function'
+    ? last[prop]() + ''
+    : last[prop]
+    : defaults[prop] + '';
+}
+
+class Renderer {
+    constructor(string, format = {}, defaults = {}){
+        this.string = string;
+        this.format = format;
+        this.defaults = defaults;
+        this.complete = false;
+        this.pattern =  /([\s\S]+?)(\\?%)\(([\s\S]+?)\)/g;
+        this.lastIndex = 0;
+    }
+    next(){
+        const match = this.pattern.exec(this.string);
+        const [m, pre, leaf, prop] = match || [];
+        if(this.complete) return this._last();
+
+        if(!match){
+            this.complete = true;
+            return this._end();
+        }
+
+        this.lastIndex = this.pattern.lastIndex;
+
+        return leaf === '%'
+        ? this._every(pre, prop)
+        : this._default(m);
+    }
+    _last(){
+        return {done: true};
+    }
+    _end(){
+        return {
+            value: [
+                this.string.slice(this.lastIndex),
+                '',
+                null
+            ],
+            done: false
+        };
+    }
+    _default(s){
+        return {
+            value: [
+                s,
+                '',
+                null
+            ],
+            done: false
+        };
+    }
+    [Symbol.iterator](){
+        return this;
+    }
+}
+
+class RendererSync extends Renderer {
+    constructor(string, format, defaults){
+        super(string, format, defaults)
+    }
+    _every(pre, prop){
+        return {
+            value: [
+                pre,
+                formatWith(
+                    this.format,
+                    prop,
+                    this.defaults
+                ),
+                prop
+            ],
+            done: false
+        };
+    }
+}
+
+class RendererAsync extends Renderer {
+    constructor(string, format, defaults){
+        super(string, format, defaults)
+    }
+    _last(){
+        return Promise.resolve(super._last());
+    }
+    _end(){
+        return Promise.resolve(super._end());
+    }
+    _every(pre, prop){
+        return Promise.resolve(
+            formatWith(
+                this.format,
+                prop,
+                this.defaults
+            )
+        ).then(result=>({
+            value: Promise.all([
+                pre,
+                result,
+                prop
+            ]),
+            done: false
+        }));
+    }
+    _default(s){
+        return Promise.resolve(super._default());
+    }
+    [Symbol.asyncIterator](){
+      return this;
+    }
+}
+
+export function present(str, format, defaults){
+    return new RendererSync(str, format, defaults);
+}
+
+export function asyncPresent(str, format, defaults){
+    return new RendererAsync(str, format, defaults);
+}
