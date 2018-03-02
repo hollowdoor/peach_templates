@@ -39,3 +39,9 @@ print(render('Cook the %(type) pie.', {}, {
 print(render('Cook the %(pie.type) pie.', {
     pie: {type:'cherry'}
 }));
+
+print(render(`
+    %(title)
+    Cook the %(pie.type) pie.
+    `, {title: 'To do', pie: {type:'cherry'}}
+));

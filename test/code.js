@@ -245,5 +245,8 @@ print(render('Cook the %(pie.type) pie.', {
     pie: {type:'cherry'}
 }));
 
+print(render("\n    %(title)\n    Cook the %(pie.type) pie.\n    ", {title: 'To do', pie: {type:'cherry'}}
+));
+
 }());
 //# sourceMappingURL=code.js.map
