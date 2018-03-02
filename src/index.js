@@ -4,17 +4,45 @@ function reduceProp(last, prop, i, props){
     : {last, prop};
 }
 
+function getLast(last, prop, defaults){
+    return last[prop] !== void 0
+    ? typeof last[prop] === 'function'
+    ? last[prop]() + ''
+    : last[prop]
+    : defaults[prop] + '';
+}
+
 function formatWith(format, gets, defaults){
 
     const {last, prop} = gets
     .split('.')
     .reduce(reduceProp, format);
 
-    return last[prop] !== void 0
-    ? typeof last[prop] === 'function'
-    ? last[prop]() + ''
-    : last[prop]
-    : defaults[prop] + '';
+    return getLast(last, prop, defaults);
+}
+
+function formatAsyncWith(format, gets, defaults){
+
+    const allGets = gets.split('.');
+
+    return !allGets.length
+    ? Promise.resolve(
+        formatWith(
+            format,
+            prop,
+            defaults
+        )
+    )
+    : allGets.reduce((p, prop, i, props)=>{
+        return p.then(last=>{
+            return props[i+1] !== void 0
+            ? last[prop]
+            : {last, prop};
+        });
+    }, Promise.resolve(format))
+    .then(({last, prop})=>{
+        return getLast(last, prop, defaults);
+    });
 }
 
 class Renderer {
@@ -101,20 +129,16 @@ class RendererAsync extends Renderer {
         return Promise.resolve(super._end());
     }
     _every(pre, prop){
-        return Promise.resolve(
-            formatWith(
-                this.format,
-                prop,
-                this.defaults
-            )
-        ).then(result=>({
-            value: Promise.all([
-                pre,
-                result,
-                prop
-            ]),
-            done: false
-        }));
+        return formatAsyncWith(
+            this.format,
+            prop,
+            this.defaults
+        ).then(result=>{
+            return {
+                value: [pre, result, prop],
+                done: false
+            };
+        });
     }
     _default(s){
         return Promise.resolve(super._default());

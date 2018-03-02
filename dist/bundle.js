@@ -8,6 +8,14 @@ function reduceProp(last, prop, i, props){
     : {last: last, prop: prop};
 }
 
+function getLast(last, prop, defaults){
+    return last[prop] !== void 0
+    ? typeof last[prop] === 'function'
+    ? last[prop]() + ''
+    : last[prop]
+    : defaults[prop] + '';
+}
+
 function formatWith(format, gets, defaults){
 
     var ref = gets
@@ -16,11 +24,34 @@ function formatWith(format, gets, defaults){
     var last = ref.last;
     var prop = ref.prop;
 
-    return last[prop] !== void 0
-    ? typeof last[prop] === 'function'
-    ? last[prop]() + ''
-    : last[prop]
-    : defaults[prop] + '';
+    return getLast(last, prop, defaults);
+}
+
+function formatAsyncWith(format, gets, defaults){
+
+    var allGets = gets.split('.');
+
+    return !allGets.length
+    ? Promise.resolve(
+        formatWith(
+            format,
+            prop,
+            defaults
+        )
+    )
+    : allGets.reduce(function (p, prop, i, props){
+        return p.then(function (last){
+            return props[i+1] !== void 0
+            ? last[prop]
+            : {last: last, prop: prop};
+        });
+    }, Promise.resolve(format))
+    .then(function (ref){
+        var last = ref.last;
+        var prop = ref.prop;
+
+        return getLast(last, prop, defaults);
+    });
 }
 
 var Renderer = function Renderer(string, format, defaults){
@@ -122,20 +153,16 @@ var RendererAsync = (function (Renderer) {
         return Promise.resolve(Renderer.prototype._end.call(this));
     };
     RendererAsync.prototype._every = function _every (pre, prop){
-        return Promise.resolve(
-            formatWith(
-                this.format,
-                prop,
-                this.defaults
-            )
-        ).then(function (result){ return ({
-            value: Promise.all([
-                pre,
-                result,
-                prop
-            ]),
-            done: false
-        }); });
+        return formatAsyncWith(
+            this.format,
+            prop,
+            this.defaults
+        ).then(function (result){
+            return {
+                value: [pre, result, prop],
+                done: false
+            };
+        });
     };
     RendererAsync.prototype._default = function _default (s){
         return Promise.resolve(Renderer.prototype._default.call(this));
